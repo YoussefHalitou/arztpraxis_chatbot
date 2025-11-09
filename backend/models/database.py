@@ -13,6 +13,14 @@ from ..settings import settings
 logger = logging.getLogger(__name__)
 
 
+def _resolve_async_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+
 class Base(DeclarativeBase):
     pass
 
@@ -50,7 +58,10 @@ class Message(Base):
     session: Mapped[ChatSession] = relationship(back_populates="messages")
 
 
-engine = create_async_engine(settings.database_url, echo=settings.sqlalchemy_echo)
+engine = create_async_engine(
+    _resolve_async_database_url(settings.database_url),
+    echo=settings.sqlalchemy_echo,
+)
 async_session_factory = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 
